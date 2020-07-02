@@ -9,7 +9,7 @@
    d. Repeat this process for every chrome sphere image.
 
 2. Perform PS to get surface normals.
-   a. Get all the images and do any preprocessing if necessary (to remove vignetting etc.)
+   a. Get all the images and do any preprocessing if necessary (to remove vignetting, convert to grey scale etc.)
    b. Generate two matrices: an L-matrix that is (k by 3) where k is the amount of lights (images),
    and an I-matrix that is (k by p) where p is the amount of pixels in an input picture.
    c. Now using these matrices, generate a G-matrix using the equation given note that you would

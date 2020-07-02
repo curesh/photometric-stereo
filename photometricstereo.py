@@ -11,7 +11,7 @@ chrome_imgs = [f for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))]
 def find_sphere_normal(chrome_img, radius, coord):
     # Frame of reference: Assume that the center of the sphere is the origin and 
     # right hand coordinate system
-    edges = cv2.Canny(chrome_img, img,100,200)
+    edges = cv.Canny(chrome_img, img,100,200) # Maybe change these threshholds
     center = np.mean(edges, axis=1) # axis might be 0
     # We have information about the x and y axes, and we need to find the z-coord
     # for a complete normal vector
