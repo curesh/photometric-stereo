@@ -1,0 +1,22 @@
+0. Make todo list lol
+
+1. First figure out how to get the L matrix using the preliminary chrome sphere data.
+   a. Figure out the frame of reference.
+   b. Given one image of a sphere, make a function that determines the normal of the sphere at a
+   point.
+   c. Now plug R(eflected) and N(ormal) into the L = 2(N*R)... equation and generate the L-matrix
+   d. Repeat this process for every chrome sphere image.
+
+2. Perform PS to get surface normals.
+   a. Get all the images and do any preprocessing if necessary (to remove vignetting etc.)
+   b. Generate two matrices: an L-matrix that is (k by 3) where k is the amount of lights (images),
+   and an I-matrix that is (k by p) where p is the amount of pixels in an input picture.
+   c. Now using these matrices, generate a G-matrix using the equation given note that you would
+   have to use some least squares method since k > 3. That part might be more complicated so figure
+   that out
+   d. Now split this into albedo and normal vectors.
+   e. Create function that maps normal vectors to color based on the specifications (red is x, blue
+   is y or something...). Now generate an image of the same size with using this color map.
+
+3. Create a depth map
+   a.
