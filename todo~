@@ -1,5 +1,0 @@
-0. Make todo list lol
-
-1. First figure out how to get the L matrix using the preliminary chrome sphere data.
-   a. Figure out the frame of reference.
-     b. Given one image of a sphere, make a function that determines the normal of the sphere at a point, based on
