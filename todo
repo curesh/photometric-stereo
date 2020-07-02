@@ -4,6 +4,7 @@
    a. Figure out the frame of reference.
    b. Given one image of a sphere, make a function that determines the normal of the sphere at a
    point.
+	i. Use canny edge detection to find the sphere. Then find the center.
    c. Now plug R(eflected) and N(ormal) into the L = 2(N*R)... equation and generate the L-matrix
    d. Repeat this process for every chrome sphere image.
 
