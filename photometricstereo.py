@@ -4,12 +4,11 @@ from os import listdir
 from os.path import isfile, join
 import statistics as stat
 import sys
+from skimage import measure
+
 # Note that coord (relative to the image) needs to be centered at 0,0 for this to work
 def get_circle(chrome_img):
     output = chrome_img.copy()
-    cv.imshow("Img in get_circle", output)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
     circles = cv.HoughCircles(output, cv.HOUGH_GRADIENT, 4, 400)
     if circles is None:
         print("Circles is none")
@@ -23,39 +22,74 @@ def get_circle(chrome_img):
             cv.circle(output, (x, y), r, (100, 100, 100), 4)
             cv.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
         # show the output image
-        cv.imshow("output in get_circle", np.hstack([chrome_img, output]))
-        cv.waitKey(0)
     return circles
 
 def find_chrome_reflect(chrome_img, circle):
     rad = int(circle[2]*0.9)
     inside_circle = []
-    img = cv.GaussianBlur(chrome_img, (9, 9), 0) # Note that this value for Guassian blur 
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
+    blurred = cv.GaussianBlur(chrome_img, (9, 9), 0) # Note that this value for Guassian blur 
+    for i in range(blurred.shape[0]):
+        for j in range(blurred.shape[1]):
             dist = np.sqrt((circle[0]-i)**2 + (circle[1]-j)**2)
-            if dist < rad:
-                #cv.circle(img, (i, j), 2, (100, 100, 0), 2)
-                inside_circle.append([i, j, chrome_img[i][j]])
+            if dist > rad:
+                blurred[i][j] = 0
+                # cv.circle(img, (i, j), 2, (100, 100, 0), 2)
+                # inside_circle.append([i, j, img[i][j]])
     # radius might need to be adjusted
-    print("find chrome ref image size: ", img.shape)
+    print("find chrome ref image size: ", blurred.shape)
     maxLocs = []
-    inside_circle = np.transpose(inside_circle)
-    print("inside_circle shape: ", np.shape(inside_circle[2]))
+    thresh = cv.threshold(blurred, 100, 255, cv.THRESH_BINARY)[1]
+    thresh = cv.erode(thresh, None, iterations=2)
+    thresh = cv.dilate(thresh, None, iterations=4)
+    labels = measure.label(thresh, neighbors=8, background=0)
+    print("Number of bright regions: ", len(labels))
+    mask = np.zeros(thresh.shape, dtype="uint8")
+    # inside_circle = np.transpose(inside_circle)
+    # print("inside_circle shape: ", np.shape(inside_circle[2]))
 
-    for i in range(20):
-        max_index = np.argmax(inside_circle[2])
-        maxLoc = [inside_circle[0][max_index], inside_circle[1][max_index]]
-        print("Max value! : ", inside_circle[:, max_index])
-        print("Actual color: ", img[maxLoc[0]][maxLoc[1]])
-        inside_circle = np.delete(inside_circle, max_index, 1)
-        maxLocs.append(maxLoc)
-        cv.circle(img, (maxLoc[0], maxLoc[1]), 10, (50, 0, 0), 4)
-    cv.imshow('img in find_chrome_reflect', img)
+    # for i in range(20):
+    #     max_index = np.argmax(inside_circle[2])
+    #     maxLoc = [inside_circle[0][max_index], inside_circle[1][max_index]]
+    #     print("Max value! : ", inside_circle[:, max_index])
+    #     print("Actual color: ", img[maxLoc[0]][maxLoc[1]])
+    #     inside_circle = np.delete(inside_circle, max_index, 1)
+    #     maxLocs.append(maxLoc)
+    #     cv.circle(img, (maxLoc[0], maxLoc[1]), 10, (50, 0, 0), 1)
+    
+# loop over the unique components
+    max_label = ()
+    for label in np.unique(labels):
+        # if this is the background label, ignore it
+        if label == 0:
+            continue
+        # otherwise, construct the label mask and count the
+        # number of pixels 
+        labelMask = np.zeros(thresh.shape, dtype="uint8")
+        labelMask[labels == label] = 255
+        numPixels = cv.countNonZero(labelMask)
+        # if the number of pixels in the component is sufficiently
+        # large, then add it to our mask of "large blobs"
+        if (not max_label) or (max_label[0] <= numPixels):
+            print("Adjusting max_label")
+            max_label = (numPixels, labelMask)
+    if not max_label:
+        sys.exit("Error no max label")
+    bright_patch = max_label[1]
+    x_avg_center = 0
+    y_avg_center = 0
+    for i in range(bright_patch.shape[0]):
+        for j in range(bright_patch.shape[1]):
+            if bright_patch[i][j]:
+                x_avg_center += j
+                y_avg_center += i
+    x_avg_center /= max_label[0]
+    y_avg_center /= max_label[0]
+    center_reflect = [int(x_avg_center), int(y_avg_center)]
+    cv.circle(chrome_img, (center_reflect[0], center_reflect[1]), 10, (130, 100, 100), 4)
+    cv.imshow('reflectpoint in find_chrome_reflect', chrome_img)
     cv.waitKey(0)
     cv.destroyAllWindows()
-    ret = np.mean(maxLocs, axis=0)
-    return int(ret[0]), int(ret[1])
+    return center_reflect
 
 def find_sphere_normal(chrome_img, coord):
     # Frame of reference: Assume right hand coordinate system
