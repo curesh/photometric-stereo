@@ -113,19 +113,21 @@ def main():
         print("Circle (x,y,r): ", circle)
         center = [circle[0], circle[1]]
         radius = circle[2]
-        cv.circle(chrome_img, (int(center[0]), int(center[1])), int(radius), (100, 0, 0), 2)
-        cv.circle(chrome_img, (int(center[0]), int(center[1])), 5, (100, 0, 0), 2)
+        cv.circle(chrome_img, (int(center[0]), int(center[1])), int(radius), (255, 0, 0), 2)
+        cv.circle(chrome_img, (int(center[0]), int(center[1])), 5, (255, 0, 0), 2)
         max_loc = find_chrome_reflect(chrome_img, circle)
         if not max_loc:
             continue
         print("Reflection point: ", max_loc)
-        cv.circle(chrome_img, (max_loc[0], max_loc[1]), 4, (140, 0, 0), 2)
-        chrome_img = draw_gridlines(chrome_img)
+        cv.circle(chrome_img, (max_loc[0], max_loc[1]), 4, (0, 0, 0), 2)
+        
+        # Uncomment if you want gridlines
+        # chrome_img = draw_gridlines(chrome_img)
         
         # Main display for chrome sphere
-        # cv.imshow('chrome sphere post analysis', chrome_img)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
+        cv.imshow('chrome sphere post analysis', chrome_img)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
         N = find_sphere_normal(chrome_img, max_loc, circle)
         print("Normal vector: ")
         print(N)
