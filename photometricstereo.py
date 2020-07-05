@@ -9,7 +9,7 @@ from skimage import measure
 
 def get_circle(chrome_img):
     output = chrome_img.copy()
-    circles = cv.HoughCircles(output, cv.HOUGH_GRADIENT, 1.4, 400)
+    circles = cv.HoughCircles(output, cv.HOUGH_GRADIENT, 2, 400)
     if circles is None:
         print("Circles is none")
     if circles is not None:
@@ -26,9 +26,10 @@ def get_circle(chrome_img):
 def find_chrome_reflect(chrome_img, circle):
     rad = int(circle[2]*0.9)
     blurred = cv.GaussianBlur(chrome_img, (9, 9), 0) # Note that this value for Guassian blur 
+    # print("Blurred shape: ", blurred.shape)
     for i in range(blurred.shape[0]):
         for j in range(blurred.shape[1]):
-            dist = np.sqrt((circle[0]-i)**2 + (circle[1]-j)**2)
+            dist = np.sqrt((circle[1]-i)**2 + (circle[0]-j)**2)
             if dist > rad:
                 blurred[i][j] = 0
     # radius might need to be adjusted
@@ -95,21 +96,24 @@ def get_surface_normals(L, I):
     return G
 
 def main():
-    dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome"
+    
+    dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/LightProbe-1"
     chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
     N = []
     R = [0, 0, 1]
     L = []
+    circle = [625, 597, 528]
     for file in chrome_img_files:
         print(file)
         chrome_img = cv.imread(file, 0) # Reads image in grayscale
-        if chrome_img.shape[0] > 500:
-            scale = chrome_img.shape[0]/500
-            width = int(chrome_img.shape[1] / scale)
-            height = int(chrome_img.shape[0] / scale)
-            dim = (width, height)
-            chrome_img = cv.resize(chrome_img, dim, interpolation=cv.INTER_AREA)
-        circle = get_circle(chrome_img)[0]
+        # if chrome_img.shape[0] > 500:
+        #     scale = chrome_img.shape[0]/500
+        #     width = int(chrome_img.shape[1] / scale)
+        #     height = int(chrome_img.shape[0] / scale)
+        #     dim = (width, height)
+        #     chrome_img = cv.resize(chrome_img, dim, interpolation=cv.INTER_AREA)
+
+        #circle = get_circle(chrome_img)[0]
         print("Circle (x,y,r): ", circle)
         center = [circle[0], circle[1]]
         radius = circle[2]
@@ -136,7 +140,7 @@ def main():
         L.append(L_vector)
     L = np.array(L)
     
-    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj"
+    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
     I = []
     for file in img_files:
@@ -159,7 +163,6 @@ def main():
     for pixels in surface_normals_flat:
         print("Pixels size: ", len(pixels))
         arr = np.reshape(pixels, (dim[1], dim[0]))
-        print("New pixels shape: ", arr.shape)
         surface_normals.append(arr)
     surface_normals = np.array(surface_normals)
     print("Final surface normals shape: ", surface_normals.shape)
