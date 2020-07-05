@@ -6,7 +6,6 @@ import statistics as stat
 import sys
 from skimage import measure
 
-# Note that coord (relative to the image) needs to be centered at 0,0 for this to work
 
 def get_circle(chrome_img):
     output = chrome_img.copy()
@@ -33,12 +32,10 @@ def find_chrome_reflect(chrome_img, circle):
             if dist > rad:
                 blurred[i][j] = 0
     # radius might need to be adjusted
-    maxLocs = []
     thresh = cv.threshold(blurred, 240, 255, cv.THRESH_BINARY)[1]
     thresh = cv.erode(thresh, None, iterations=2)
     thresh = cv.dilate(thresh, None, iterations=4)
     labels = measure.label(thresh, connectivity=2, background=0)
-    mask = np.zeros(thresh.shape, dtype="uint8")
     
 # loop over the unique components
     max_label = ()
@@ -47,14 +44,14 @@ def find_chrome_reflect(chrome_img, circle):
         if label == 0:
             continue
         # otherwise, construct the label mask and count the
-        # number of pixels 
-        labelMask = np.zeros(thresh.shape, dtype="uint8")
-        labelMask[labels == label] = 255
-        numPixels = cv.countNonZero(labelMask)
+        # number of pixels
+        label_mask = np.zeros(thresh.shape, dtype="uint8")
+        label_mask[labels == label] = 255
+        num_pixels = cv.countNonZero(label_mask)
         # if the number of pixels in the component is sufficiently
         # large, then add it to our mask of "large blobs"
-        if (not max_label) or (max_label[0] <= numPixels):
-            max_label = (numPixels, labelMask)
+        if (not max_label) or (max_label[0] <= num_pixels):
+            max_label = (num_pixels, label_mask)
     if not max_label:
         print("Error no max label")
         return 0
@@ -77,14 +74,29 @@ def find_sphere_normal(chrome_img, coord, circle):
     # We have information about the x and y axes, and we need to find the z-coord
     # for a complete normal vector
     zcoord = np.sqrt(circle[2]**2 - (coord[0]-circle[0])**2 - (coord[1]-circle[1])**2)
-    norm = [coord[0]-circle[0], coord[1]-circle[1], zcoord]
+    norm = [coord[0]-circle[0], -1 * (coord[1]-circle[1]), zcoord]
     magnitude = np.sqrt(norm[0]**2 + norm[1]**2 + norm[2]**2)
     norm = norm/magnitude
     return norm
 
+def draw_gridlines(chrome_img):
+    width = chrome_img.shape[0]
+    height = chrome_img.shape[1]
+    for i in range(0, height, 50):
+        cv.line(chrome_img, (i, 0), (i, width), (0, 0, 0), 1)
+    for i in range(0, width, 50):
+        cv.line(chrome_img, (0, i), (height, i), (0, 0, 0), 1)
+    return chrome_img
+
+def get_surface_normals(L, I):
+    G = np.matmul(L.T, I)
+    inv = np.linalg.inv(np.matmul(L.T, L))
+    G = np.matmul(inv, G)
+    return G
+
 def main():
     dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome"
-    chrome_img_files = [join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))]
+    chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
     N = []
     R = [0, 0, 1]
     L = []
@@ -103,15 +115,18 @@ def main():
         radius = circle[2]
         cv.circle(chrome_img, (int(center[0]), int(center[1])), int(radius), (100, 0, 0), 2)
         cv.circle(chrome_img, (int(center[0]), int(center[1])), 5, (100, 0, 0), 2)
-        maxLoc = find_chrome_reflect(chrome_img, circle)
-        if not maxLoc:
+        max_loc = find_chrome_reflect(chrome_img, circle)
+        if not max_loc:
             continue
-        print("Reflection point: ", maxLoc)
-        cv.circle(chrome_img, (maxLoc[0], maxLoc[1]), 4, (140, 0, 0), 4)
-        cv.imshow('chrome sphere post analysis', chrome_img)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
-        N = find_sphere_normal(chrome_img, maxLoc, circle)
+        print("Reflection point: ", max_loc)
+        cv.circle(chrome_img, (max_loc[0], max_loc[1]), 4, (140, 0, 0), 2)
+        chrome_img = draw_gridlines(chrome_img)
+        
+        # Main display for chrome sphere
+        # cv.imshow('chrome sphere post analysis', chrome_img)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+        N = find_sphere_normal(chrome_img, max_loc, circle)
         print("Normal vector: ")
         print(N)
         L_vector = [(2*np.dot(N,R)*N[i])-R[i] for i in range(3)]
@@ -119,9 +134,44 @@ def main():
         print(L_vector)
         #Maybe normalize?
         L.append(L_vector)
-        
-
+    L = np.array(L)
+    
+    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj"
+    img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
+    I = []
+    for file in img_files:
+        print(file)
+        img = cv.imread(file, 0)
+        if img.shape[0] > 500:
+            scale = img.shape[0]/500
+            width = int(img.shape[1] / scale)
+            height = int(img.shape[0] / scale)
+            dim = (width, height)
+            img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
+        curr_I = [element for row in img for element in row]
+        I.append(curr_I)
+    I = np.array(I)
+    G = get_surface_normals(L, I).T
+    print("G shape: ", G.shape)
+    surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
+    print("Output shape: ", surface_normals_flat.shape)
+    surface_normals = []
+    for pixels in surface_normals_flat:
+        print("Pixels size: ", len(pixels))
+        arr = np.reshape(pixels, (dim[1], dim[0]))
+        print("New pixels shape: ", arr.shape)
+        surface_normals.append(arr)
+    surface_normals = np.array(surface_normals)
+    print("Final surface normals shape: ", surface_normals.shape)
+    row = []
+    r = np.array(surface_normals[0])
+    g = np.array(surface_normals[1])
+    b = np.array(surface_normals[2])
+    surface_normals = cv.merge((b, g, r))
+    print("final shape: ", surface_normals.shape)
+    cv.imshow("Colormap", surface_normals)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+    
 if __name__ == "__main__":
     main()
-
-
