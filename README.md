@@ -11,3 +11,6 @@ Values range from 0 to 255 but a good value is around 240.
 
 For vani's data set, the best dp is 1.4 and the best threshold is 240.
 
+To run with the [harvard dataset](http://vision.seas.harvard.edu/qsfs/Data.html) switch branch from master to dataset.
+
+
