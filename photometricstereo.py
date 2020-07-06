@@ -8,18 +8,11 @@ from skimage import measure
 
 
 def get_circle(chrome_img):
-    output = chrome_img.copy()
     circles = cv.HoughCircles(output, cv.HOUGH_GRADIENT, 2, 400)
     if circles is None:
         print("Circles is none")
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
-        # loop over the (x, y) coordinates and radius of the circles
-        for (x, y, r) in circles:
-            # draw the circle in the output image, then draw a rectangle
-            # corresponding to the center of the circle
-            cv.circle(output, (x, y), r, (100, 100, 100), 4)
-            cv.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
         # show the output image
     return circles
 
@@ -67,7 +60,6 @@ def find_chrome_reflect(chrome_img, circle):
     x_avg_center /= max_label[0]
     y_avg_center /= max_label[0]
     center_reflect = [int(x_avg_center), int(y_avg_center)]
-    # cv.circle(chrome_img, (center_reflect[0], center_reflect[1]), 10, (130, 100, 100), 4)
     return center_reflect
 
 def find_sphere_normal(chrome_img, coord, circle):
@@ -96,7 +88,6 @@ def get_surface_normals(L, I):
     return G
 
 def main():
-    
     dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/LightProbe-1"
     chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
     N = []
@@ -106,14 +97,6 @@ def main():
     for file in chrome_img_files:
         print(file)
         chrome_img = cv.imread(file, 0) # Reads image in grayscale
-        # if chrome_img.shape[0] > 500:
-        #     scale = chrome_img.shape[0]/500
-        #     width = int(chrome_img.shape[1] / scale)
-        #     height = int(chrome_img.shape[0] / scale)
-        #     dim = (width, height)
-        #     chrome_img = cv.resize(chrome_img, dim, interpolation=cv.INTER_AREA)
-
-        #circle = get_circle(chrome_img)[0]
         print("Circle (x,y,r): ", circle)
         center = [circle[0], circle[1]]
         radius = circle[2]
