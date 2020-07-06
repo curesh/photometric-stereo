@@ -8,19 +8,11 @@ from skimage import measure
 
 
 def get_circle(chrome_img):
-    output = chrome_img.copy()
-    circles = cv.HoughCircles(output, cv.HOUGH_GRADIENT, 1.4, 400)
+    circles = cv.HoughCircles(chrome_img, cv.HOUGH_GRADIENT, 1.4, 400)
     if circles is None:
         print("Circles is none")
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
-        # loop over the (x, y) coordinates and radius of the circles
-        for (x, y, r) in circles:
-            # draw the circle in the output image, then draw a rectangle
-            # corresponding to the center of the circle
-            cv.circle(output, (x, y), r, (100, 100, 100), 4)
-            cv.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-        # show the output image
     return circles
 
 def find_chrome_reflect(chrome_img, circle):
@@ -53,8 +45,7 @@ def find_chrome_reflect(chrome_img, circle):
         if (not max_label) or (max_label[0] <= num_pixels):
             max_label = (num_pixels, label_mask)
     if not max_label:
-        print("Error no max label")
-        return 0
+        sys.exit("Error no max label")
     bright_patch = max_label[1]
     x_avg_center = 0
     y_avg_center = 0
@@ -66,7 +57,6 @@ def find_chrome_reflect(chrome_img, circle):
     x_avg_center /= max_label[0]
     y_avg_center /= max_label[0]
     center_reflect = [int(x_avg_center), int(y_avg_center)]
-    # cv.circle(chrome_img, (center_reflect[0], center_reflect[1]), 10, (130, 100, 100), 4)
     return center_reflect
 
 def find_sphere_normal(chrome_img, coord, circle):
