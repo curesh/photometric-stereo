@@ -8,7 +8,7 @@ from skimage import measure
 
 
 def get_circle(chrome_img):
-    circles = cv.HoughCircles(output, cv.HOUGH_GRADIENT, 2, 400)
+    circles = cv.HoughCircles(chrome_img, cv.HOUGH_GRADIENT, 2, 400)
     if circles is None:
         print("Circles is none")
     if circles is not None:
