@@ -87,6 +87,24 @@ def get_surface_normals(L, I):
     G = np.matmul(inv, G)
     return G
 
+def get_errors(albedo, surface_normals, I, masks, L):
+    Ierr = np.array([])
+    # This assumes that each normal vector is a row, and that image matrix is flattened into an array
+    b = [vect*albedo[i] for i,vect in enumerate(surface_normals)]
+    for i in range(I.shape[1]):
+        Ierri = np.array([I[:,i] - [np.dot(b[j], L[j]) for j in range(b.shape[0])])
+        for iterate, element in enumerate(Ierri):
+            if not masks[iterate]:
+                element = 0
+            Ierr += Ierri**2
+    Ierr = np.sqrt(Ierr/ np.sum(mask, 1))
+    print("Evaluate scaled normal estimation by intensity error:")
+    print("RMS: ", np.sqrt(np.mean(Ierr**2)))
+    print("Mean: ", np.mean(Ierr))
+    print("Median: ", np.median(Ierr))
+    print("90 percentile: ", np.percentile(Ierr, 90))
+    print("Max: ", np.max(Ierr))
+
 def main():
     dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/LightProbe-1"
     chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
