@@ -1,9 +1,8 @@
-import cv2 as cv
-import numpy as np
 from os import listdir
 from os.path import isfile, join
-import statistics as stat
 import sys
+import cv2 as cv
+import numpy as np
 from skimage import measure
 
 
