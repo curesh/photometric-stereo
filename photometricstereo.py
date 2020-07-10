@@ -83,9 +83,28 @@ def get_surface_normals(L, I):
     G = np.matmul(inv, G)
     return G
 
+def get_errors(albedo, surface_normals, I, masks, L):
+    Ierr = np.array([])
+    # This assumes that each normal vector is a row, and that image matrix is flattened into an array
+    b = [vect*albedo[i] for i,vect in enumerate(surface_normals)]
+    for i in range(I.shape[1]):
+        Ierri = np.array([I[:,i] - [np.dot(b[j], L[j]) for j in range(b.shape[0])])
+        for iterate, element in enumerate(Ierri):
+            if not masks[iterate]:
+                element = 0
+            Ierr += Ierri**2
+    Ierr = np.sqrt(Ierr/ np.sum(mask, 1))
+    print("Evaluate scaled normal estimation by intensity error:")
+    print("RMS: ", np.sqrt(np.mean(Ierr**2)))
+    print("Mean: ", np.mean(Ierr))
+    print("Median: ", np.median(Ierr))
+    print("90 percentile: ", np.percentile(Ierr, 90))
+    print("Max: ", np.max(Ierr))
+
 def main():
     dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome"
     chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
+    
     N = []
     R = [0, 0, 1]
     L = []
@@ -112,7 +131,7 @@ def main():
         
         # Uncomment if you want gridlines
         # chrome_img = draw_gridlines(chrome_img)
-        
+
         # Main display for chrome sphere
         cv.imshow('chrome sphere post analysis', chrome_img)
         cv.waitKey(0)
@@ -130,6 +149,7 @@ def main():
     dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj"
     img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
     I = []
+    masks = np.array([])
     for file in img_files:
         print(file)
         img = cv.imread(file, 0)
@@ -141,10 +161,17 @@ def main():
             img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
         curr_I = [element for row in img for element in row]
         I.append(curr_I)
+        
+        np.append(masks, cv.threshold(img, 26, 255, cv.THRESH_BINARY).flatten())
+
     I = np.array(I)
     G = get_surface_normals(L, I).T
     print("G shape: ", G.shape)
+    albedo = np.array([np.linalg.norm(vect) for vect in G])
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
+    
+    get_errors(albedo, surface_normals_flat.T, I, masks, L)
+    
     print("Output shape: ", surface_normals_flat.shape)
     surface_normals = []
     for pixels in surface_normals_flat:
