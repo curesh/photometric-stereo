@@ -6,7 +6,7 @@ import statistics as stat
 import sys
 from skimage import measure
 
-
+# This function finds the chrome sphere location in a chrome sphere img
 def get_circle(chrome_img):
     circles = cv.HoughCircles(chrome_img, cv.HOUGH_GRADIENT, 2, 400)
     if circles is None:
@@ -16,6 +16,7 @@ def get_circle(chrome_img):
         # show the output image
     return circles
 
+# This function finds the location of the glare in the chrome sphere img
 def find_chrome_reflect(chrome_img, circle):
     rad = int(circle[2]*0.9)
     blurred = cv.GaussianBlur(chrome_img, (9, 9), 0) # Note that this value for Guassian blur 
@@ -62,7 +63,8 @@ def find_chrome_reflect(chrome_img, circle):
     center_reflect = [int(x_avg_center), int(y_avg_center)]
     return center_reflect
 
-def find_sphere_normal(chrome_img, coord, circle):
+# This function returns the normal vector of the surface of a sphere, given the x,y coordinates
+def find_sphere_normal(coord, circle):
     # Frame of reference: Assume right hand coordinate system
     # We have information about the x and y axes, and we need to find the z-coord
     # for a complete normal vector
@@ -72,6 +74,7 @@ def find_sphere_normal(chrome_img, coord, circle):
     norm = norm/magnitude
     return norm
 
+# This function draws gridlines on an image
 def draw_gridlines(chrome_img):
     width = chrome_img.shape[0]
     height = chrome_img.shape[1]
@@ -81,12 +84,14 @@ def draw_gridlines(chrome_img):
         cv.line(chrome_img, (0, i), (height, i), (0, 0, 0), 1)
     return chrome_img
 
+# This function does the lambarts law computations to get the G matrix (surface normals and albedo)
 def get_surface_normals(L, I):
     G = np.matmul(L.T, I)
     inv = np.linalg.inv(np.matmul(L.T, L))
     G = np.matmul(inv, G)
     return G
 
+# This function prints out the RMS errors and other statistics of the surface normal computation
 def get_errors(albedo, surface_normals, I, masks, L):
     Ierr = np.array([])
     # This assumes that each normal vector is a row, and that image matrix is flattened into an array
@@ -102,6 +107,7 @@ def get_errors(albedo, surface_normals, I, masks, L):
         else:
             Ierr += Ierri**2
     isfin = np.isfinite(np.sqrt(Ierr/ np.sum(masks, 0)))
+
     Ierr = [element for i, element in enumerate(Ierr) if isfin[i]]
     Ierr = np.array(Ierr)
     print("Evaluate scaled normal estimation by intensity error:")
@@ -111,8 +117,8 @@ def get_errors(albedo, surface_normals, I, masks, L):
     print("90 percentile: ", np.percentile(Ierr, 90))
     print("Max: ", np.max(Ierr))
 
-def main():
-    dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/LightProbe-1"
+#This function does the chrome_sphere analysis and returns the light direction matrix
+def chrome_sphere_analysis(dir_chrome):
     chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
     N = []
     R = [0, 0, 1]
@@ -123,7 +129,6 @@ def main():
         #     break
         print(file)
         chrome_img = cv.imread(file, 0) # Reads image in grayscale
-        print("Circle (x,y,r): ", circle)
         center = [circle[0], circle[1]]
         radius = circle[2]
         cv.circle(chrome_img, (int(center[0]), int(center[1])), int(radius), (100, 0, 0), 2)
@@ -131,7 +136,6 @@ def main():
         max_loc = find_chrome_reflect(chrome_img, circle)
         if not max_loc:
             continue
-        print("Reflection point: ", max_loc)
         cv.circle(chrome_img, (max_loc[0], max_loc[1]), 4, (140, 0, 0), 2)
         chrome_img = draw_gridlines(chrome_img)
         
@@ -139,17 +143,17 @@ def main():
         # cv.imshow('chrome sphere post analysis', chrome_img)
         # cv.waitKey(0)
         # cv.destroyAllWindows()
-        N = find_sphere_normal(chrome_img, max_loc, circle)
-        print("Normal vector: ")
-        print(N)
+        
+        N = find_sphere_normal(max_loc, circle)
         L_vector = [(2*np.dot(N,R)*N[i])-R[i] for i in range(3)]
-        print("L vector: ")
-        print(L_vector)
         #Maybe normalize?
         L.append(L_vector)
     L = np.array(L)
-    
-    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
+    L = np.array([vect/np.linalg.norm(vect) for vect in L])
+    return L
+
+# This function does the photometric stereo analysis and returns the surface normal matrix
+def pms_analysis(dir_img, L):
     img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
     I = []
     masks = []
@@ -167,6 +171,8 @@ def main():
         curr_I = [element for row in img for element in row]
         I.append(curr_I)
         maski = cv.threshold(img, 26, 255, cv.THRESH_BINARY)[1]
+        kernel = np.ones((5,5),np.uint8)
+        maski = cv.erode(maski,kernel,iterations = 1)
         maski = maski.flatten()
         print("maski size!!: ", maski.shape, " img size: ", img.shape)
         masks.append(maski)
@@ -193,6 +199,13 @@ def main():
     g = np.array(surface_normals[1])
     b = np.array(surface_normals[2])
     surface_normals = cv.merge((b, g, r))
+    return surface_normals
+
+def main():
+    dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/LightProbe-1"
+    L = chrome_sphere_analysis(dir_chrome)
+    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
+    surface_normals = pms_analysis(dir_img, L)
     print("final shape: ", surface_normals.shape)
     cv.imshow("Colormap", surface_normals)
     cv.waitKey(0)
