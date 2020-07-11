@@ -90,14 +90,20 @@ def get_surface_normals(L, I):
 def get_errors(albedo, surface_normals, I, masks, L):
     Ierr = np.array([])
     # This assumes that each normal vector is a row, and that image matrix is flattened into an array
-    b = [vect*albedo[i] for i,vect in enumerate(surface_normals)]
+    b = np.array([vect*albedo[i] for i,vect in enumerate(surface_normals)])
+    print("albedo shape ", albedo.shape, " surface_normals shape: ", surface_normals.shape, " I shape:", I.shape, " masks shape: ", masks.shape, " L shape: ", L.shape, " b shape: ", b.shape)
     for i in range(I.shape[1]):
-        Ierri = np.array([I[:,i] - [np.dot(b[j], L[j]) for j in range(b.shape[0])])
+        Ierri = np.array(I[:,i] - [np.dot(b[j], L[i]) for j in range(b.shape[0])])
         for iterate, element in enumerate(Ierri):
-            if not masks[iterate]:
-                element = 0
+            if not masks[i,iterate]:
+                Ierri[iterate] = 0
+        if not Ierr.size:
+            Ierr = Ierri**2
+        else:
             Ierr += Ierri**2
-    Ierr = np.sqrt(Ierr/ np.sum(mask, 1))
+    isfin = np.isfinite(np.sqrt(Ierr/ np.sum(masks, 0)))
+    Ierr = [element for i, element in enumerate(Ierr) if isfin[i]]
+    Ierr = np.array(Ierr)
     print("Evaluate scaled normal estimation by intensity error:")
     print("RMS: ", np.sqrt(np.mean(Ierr**2)))
     print("Mean: ", np.mean(Ierr))
@@ -112,7 +118,9 @@ def main():
     R = [0, 0, 1]
     L = []
     circle = [625, 597, 528]
-    for file in chrome_img_files:
+    for count, file in enumerate(chrome_img_files):
+        # if count == 4:
+        #     break
         print(file)
         chrome_img = cv.imread(file, 0) # Reads image in grayscale
         print("Circle (x,y,r): ", circle)
@@ -144,7 +152,10 @@ def main():
     dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
     I = []
-    for file in img_files:
+    masks = []
+    for count, file in enumerate(img_files):
+        # if count == 4:
+        #     break
         print(file)
         img = cv.imread(file, 0)
         if img.shape[0] > 500:
@@ -155,9 +166,19 @@ def main():
             img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
         curr_I = [element for row in img for element in row]
         I.append(curr_I)
+        maski = cv.threshold(img, 26, 255, cv.THRESH_BINARY)[1]
+        maski = maski.flatten()
+        print("maski size!!: ", maski.shape, " img size: ", img.shape)
+        masks.append(maski)
+    masks = np.array(masks)
     I = np.array(I)
     G = get_surface_normals(L, I).T
     print("G shape: ", G.shape)
+    albedo = np.array([np.linalg.norm(vect) for vect in G])
+    surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
+    
+    get_errors(albedo, surface_normals_flat.T, I.T, masks, L)
+    
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
     print("Output shape: ", surface_normals_flat.shape)
     surface_normals = []
