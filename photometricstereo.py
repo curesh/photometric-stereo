@@ -101,10 +101,8 @@ def get_errors(albedo, surface_normals, I, masks, L):
     print("90 percentile: ", np.percentile(Ierr, 90))
     print("Max: ", np.max(Ierr))
 
-def main():
-    dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome"
+def chrome_sphere_analysis(dir_chrome):
     chrome_img_files = sorted([join(dir_chrome, f) for f in listdir(dir_chrome) if isfile(join(dir_chrome, f))])
-    
     N = []
     R = [0, 0, 1]
     L = []
@@ -145,8 +143,9 @@ def main():
         #Maybe normalize?
         L.append(L_vector)
     L = np.array(L)
+    return L
     
-    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj"
+ def pms_analysis(dir_img, L):
     img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
     I = []
     masks = np.array([])
@@ -161,7 +160,6 @@ def main():
             img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
         curr_I = [element for row in img for element in row]
         I.append(curr_I)
-        
         np.append(masks, cv.threshold(img, 26, 255, cv.THRESH_BINARY).flatten())
 
     I = np.array(I)
@@ -186,6 +184,14 @@ def main():
     g = np.array(surface_normals[1])
     b = np.array(surface_normals[2])
     surface_normals = cv.merge((b, g, r))
+    return surface_normals
+
+def main():
+    dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome"
+    L = chrome_sphere_analysis(dir_chrome)
+    
+    dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj"
+    surface_normals = pms_analysis(dir_img, L)
     print("final shape: ", surface_normals.shape)
     cv.imshow("Colormap", surface_normals)
     cv.waitKey(0)
