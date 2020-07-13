@@ -96,9 +96,10 @@ def get_errors(albedo, surface_normals, I, masks, L):
     Ierr = np.array([])
     # This assumes that each normal vector is a row, and that image matrix is flattened into an array
     b = np.array([vect*albedo[i] for i,vect in enumerate(surface_normals)])
-    print("albedo shape ", albedo.shape, " surface_normals shape: ", surface_normals.shape, " I shape:", I.shape, " masks shape: ", masks.shape, " L shape: ", L.shape, " b shape: ", b.shape)
     for i in range(I.shape[1]):
-        Ierri = np.array(I[:,i] - [np.dot(b[j], L[i]) for j in range(b.shape[0])])
+        reconstructed = [np.dot(b[j], L[i]) for j in range(b.shape[0])]
+        Ierri = np.array(I[:,i] - reconstructed)/256
+
         for iterate, element in enumerate(Ierri):
             if not masks[i,iterate]:
                 Ierri[iterate] = 0
@@ -106,7 +107,8 @@ def get_errors(albedo, surface_normals, I, masks, L):
             Ierr = Ierri**2
         else:
             Ierr += Ierri**2
-    isfin = np.isfinite(np.sqrt(Ierr/ np.sum(masks, 0)))
+    with np.errstate(divide='ignore',invalid='ignore'):
+        isfin = np.isfinite(np.sqrt(Ierr/ np.sum(masks, 0)))
 
     Ierr = [element for i, element in enumerate(Ierr) if isfin[i]]
     Ierr = np.array(Ierr)
@@ -160,7 +162,6 @@ def pms_analysis(dir_img, L):
     for count, file in enumerate(img_files):
         # if count == 4:
         #     break
-        print(file)
         img = cv.imread(file, 0)
         if img.shape[0] > 500:
             scale = img.shape[0]/500
@@ -174,7 +175,6 @@ def pms_analysis(dir_img, L):
         kernel = np.ones((5,5),np.uint8)
         maski = cv.erode(maski,kernel,iterations = 1)
         maski = maski.flatten()
-        print("maski size!!: ", maski.shape, " img size: ", img.shape)
         masks.append(maski)
     masks = np.array(masks)
     I = np.array(I)
@@ -186,10 +186,8 @@ def pms_analysis(dir_img, L):
     get_errors(albedo, surface_normals_flat.T, I.T, masks, L)
     
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
-    print("Output shape: ", surface_normals_flat.shape)
     surface_normals = []
     for pixels in surface_normals_flat:
-        print("Pixels size: ", len(pixels))
         arr = np.reshape(pixels, (dim[1], dim[0]))
         surface_normals.append(arr)
     surface_normals = np.array(surface_normals)
