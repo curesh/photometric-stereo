@@ -5,6 +5,7 @@ import cv2 as cv
 import numpy as np
 from skimage import measure
 import argparse
+import math
 
 # This function finds the chrome sphere location in a chrome sphere img
 def get_circle(chrome_img, dp):
@@ -26,7 +27,7 @@ def find_chrome_reflect(chrome_img, circle):
             if dist > rad:
                 blurred[i][j] = 0
     # radius might need to be adjusted
-    thresh = cv.threshold(blurred, 180, 255, cv.THRESH_BINARY)[1]
+    thresh = cv.threshold(blurred, 240, 255, cv.THRESH_BINARY)[1]
     thresh = cv.erode(thresh, None, iterations=2)
     thresh = cv.dilate(thresh, None, iterations=4)
     labels = measure.label(thresh, connectivity=2, background=0)
@@ -89,6 +90,44 @@ def get_surface_normals(L, I):
     G = np.matmul(inv, G)
     return G
 
+def compare_harvard_sn(surface_normals, final_mask):
+    my_sn = surface_normals.copy()
+    cv.imshow("just orig", surface_normals)
+    harvard_sn_dir = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/original_sn.png"
+    orig_my_img_dir = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/orig_my_img.png"
+    my_sn = cv.imread(orig_my_img_dir, 1)
+    harvard_sn = cv.imread(harvard_sn_dir, 1)
+    avg_mae = 0
+    scale = harvard_sn.shape[0]/500
+    width = int(harvard_sn.shape[1] / scale)
+    height = int(harvard_sn.shape[0] / scale)
+    dim = (width, height)
+    harvard_sn = cv.resize(harvard_sn, dim, interpolation=cv.INTER_AREA)
+    error_matrix = np.zeros(harvard_sn.shape)
+    for i in range(harvard_sn.shape[0]):
+        for j in range(harvard_sn.shape[1]):
+            if final_mask[i][j]:
+                print("mine: ", my_sn[i][j], " harvard: ", harvard_sn[i][j])
+                mags = round(np.linalg.norm(my_sn[i][j])*np.linalg.norm(harvard_sn[i][j]))
+                norm = np.dot(np.double(my_sn[i][j]), np.double(harvard_sn[i][j]))
+                norm = norm/mags
+                avg_mae += abs(math.acos(norm))
+                error_matrix[i][j] = abs(math.acos(norm))
+            else:
+                my_sn[i][j] = [255,255,255]
+    error_matrix = np.uint8(error_matrix*256)
+    # my_sn = cv.normalize(my_sn, None, alpha = 0, beta = 255, norm_type = cv.NORM_MINMAX, dtype = cv.CV_32F)
+    # my_sn = np.uint8(my_sn) 
+    cv.imshow("orig with change", my_sn)
+    cv.imshow("harvard", harvard_sn)
+    cv.imshow("error matrix", error_matrix)
+    cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :-1]))
+    cv.waitKey(0)
+    avg_mae /= np.count_nonzero(final_mask)
+    print("Average mean angle error: ", avg_mae)
+    print("median of mine", np.median(my_sn))
+    print("median of harvard", np.median(harvard_sn))
+
 # This function prints out the RMS errors and other statistics of the surface normal computation
 def get_errors(albedo, surface_normals, I, masks, L, dim):
     Ierr = np.array([])
@@ -98,18 +137,13 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
         reconstructed = np.reshape(np.array([np.dot(b[j], L[i]) if np.dot(b[j], L[i])>0 else 0 for j in range(b.shape[0])]), (dim[1], dim[0]))
         # THe following code is to look at the reconstructed images
         # reconstructed = np.uint8(reconstructed)
-        # print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
-        # print("IMportant reconstucted image dtype", reconstructed.dtype)
-
         # cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
         # cv.imshow("reconstructed", reconstructed)
         # cv.waitKey(0)
         # cv.destroyAllWindows()
         # reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
         reconstructed = reconstructed.flatten()
-        
-        
-        Ierri = np.array(I[:,i] - reconstructed)/256
+        Ierri = np.array(I[:,i] - reconstructed)/I[:,i]
 
         for iterate, element in enumerate(Ierri):
             if not masks[i,iterate]:
@@ -197,11 +231,15 @@ def pms_analysis(dir_img, L):
         curr_I = [element for row in img for element in row]
         I.append(curr_I)
         maski = cv.threshold(img, 26, 255, cv.THRESH_BINARY)[1]
-        kernel = np.ones((5,5),np.uint8)
+        kernel = np.ones((20,20),np.uint8)
         maski = cv.erode(maski,kernel,iterations = 1)
         maski = maski.flatten()
         masks.append(maski)
+
     masks = np.array(masks)
+    final_mask = np.uint8(np.reshape(np.sum(masks, axis=0), (dim[1], dim[0])))
+    print("final mask shape", final_mask.shape)
+    final_mask = cv.threshold(final_mask, 1, 255, cv.THRESH_BINARY)[1]
     I = np.array(I)
     G = get_surface_normals(L, I).T
     print("G shape: ", G.shape)
@@ -218,9 +256,12 @@ def pms_analysis(dir_img, L):
     print("Final surface normals shape: ", surface_normals.shape)
     row = []
     r = np.array(surface_normals[0])
-    g = np.array(surface_normals[1])
+    g = np.array(-1 *surface_normals[1])
     b = np.array(surface_normals[2])
     surface_normals = cv.merge((b, g, r))
+    
+    compare_harvard_sn(surface_normals, final_mask)
+    
     return surface_normals
 
 def main():
