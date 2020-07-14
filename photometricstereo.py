@@ -90,12 +90,25 @@ def get_surface_normals(L, I):
     return G
 
 # This function prints out the RMS errors and other statistics of the surface normal computation
-def get_errors(albedo, surface_normals, I, masks, L):
+def get_errors(albedo, surface_normals, I, masks, L, dim):
     Ierr = np.array([])
     # This assumes that each normal vector is a row, and that image matrix is flattened into an array
     b = np.array([vect*albedo[i] for i,vect in enumerate(surface_normals)])
     for i in range(I.shape[1]):
-        reconstructed = [np.dot(b[j], L[i]) for j in range(b.shape[0])]
+        reconstructed = np.reshape(np.array([np.dot(b[j], L[i]) if np.dot(b[j], L[i])>0 else 0 for j in range(b.shape[0])]), (dim[1], dim[0]))
+        # THe following code is to look at the reconstructed images
+        # reconstructed = np.uint8(reconstructed)
+        # print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
+        # print("IMportant reconstucted image dtype", reconstructed.dtype)
+
+        # cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
+        # cv.imshow("reconstructed", reconstructed)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+        # reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
+        reconstructed = reconstructed.flatten()
+        
+        
         Ierri = np.array(I[:,i] - reconstructed)/256
 
         for iterate, element in enumerate(Ierri):
@@ -138,9 +151,9 @@ def chrome_sphere_analysis(dir_chrome, args):
             chrome_img = cv.resize(chrome_img, dim, interpolation=cv.INTER_AREA)
         if args.toggle:
             circle = [625, 597, 528]
+            circle = [element/scale for element in circle]
         else:
             circle = get_circle(chrome_img, args.dp)
-        circle = [element/scale for element in circle]
         center = [circle[0], circle[1]]
         radius = circle[2]
         cv.circle(chrome_img, (int(center[0]), int(center[1])), int(radius), (255, 0, 0), 2)
@@ -163,7 +176,7 @@ def chrome_sphere_analysis(dir_chrome, args):
         #Maybe normalize?
         L.append(L_vector)
     L = np.array(L)
-    # L = np.array([vect/np.linalg.norm(vect) for vect in L])
+    L = np.array([vect/np.linalg.norm(vect) for vect in L])
     return L
 
 # This function does the photometric stereo analysis and returns the surface normal matrix
@@ -195,9 +208,8 @@ def pms_analysis(dir_img, L):
     albedo = np.array([np.linalg.norm(vect) for vect in G])
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
     
-    get_errors(albedo, surface_normals_flat.T, I.T, masks, L)
+    get_errors(albedo, surface_normals_flat.T, I.T, masks, L, dim)
     
-    surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
     surface_normals = []
     for pixels in surface_normals_flat:
         arr = np.reshape(pixels, (dim[1], dim[0]))
