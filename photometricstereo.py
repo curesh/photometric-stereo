@@ -6,6 +6,7 @@ import numpy as np
 from skimage import measure
 import argparse
 import math
+import matplotlib.pyplot as plt
 
 # This function finds the chrome sphere location in a chrome sphere img
 def get_circle(chrome_img, dp):
@@ -107,7 +108,6 @@ def compare_harvard_sn(surface_normals, final_mask):
     for i in range(harvard_sn.shape[0]):
         for j in range(harvard_sn.shape[1]):
             if final_mask[i][j]:
-                print("mine: ", my_sn[i][j], " harvard: ", harvard_sn[i][j])
                 mags = round(np.linalg.norm(my_sn[i][j])*np.linalg.norm(harvard_sn[i][j]))
                 norm = np.dot(np.double(my_sn[i][j]), np.double(harvard_sn[i][j]))
                 norm = norm/mags
@@ -137,13 +137,18 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
         reconstructed = np.reshape(np.array([np.dot(b[j], L[i]) if np.dot(b[j], L[i])>0 else 0 for j in range(b.shape[0])]), (dim[1], dim[0]))
         # THe following code is to look at the reconstructed images
         # reconstructed = np.uint8(reconstructed)
+        # print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
+        # print("IMportant reconstucted image dtype", reconstructed.dtype)
+
         # cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
         # cv.imshow("reconstructed", reconstructed)
         # cv.waitKey(0)
         # cv.destroyAllWindows()
         # reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
         reconstructed = reconstructed.flatten()
-        Ierri = np.array(I[:,i] - reconstructed)/I[:,i]
+        
+        
+        Ierri = np.array(np.double(I[:,i]) - reconstructed)/256
 
         for iterate, element in enumerate(Ierri):
             if not masks[i,iterate]:
@@ -163,6 +168,8 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
     print("Median: ", np.median(Ierr))
     print("90 percentile: ", np.percentile(Ierr, 90))
     print("Max: ", np.max(Ierr))
+    plt.hist(Ierr.flatten())
+    plt.show()
 
 #This function does the chrome_sphere analysis and returns the light direction matrix
 def chrome_sphere_analysis(dir_chrome, args):
