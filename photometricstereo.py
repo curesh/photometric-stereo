@@ -1,5 +1,6 @@
 from os import listdir
 from os.path import isfile, join
+from os import getcwd
 import sys
 import cv2 as cv
 import numpy as np
@@ -124,6 +125,7 @@ def compare_harvard_sn(surface_normals, final_mask):
     cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :-1]))
     cv.waitKey(0)
     avg_mae /= np.count_nonzero(final_mask)
+    avg_mae *= 360/(2*math.pi)
     print("Average mean angle error: ", avg_mae)
     print("median of mine", np.median(my_sn))
     print("median of harvard", np.median(harvard_sn))
@@ -168,7 +170,9 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
     print("Median: ", np.median(Ierr))
     print("90 percentile: ", np.percentile(Ierr, 90))
     print("Max: ", np.max(Ierr))
-    plt.hist(Ierr.flatten())
+    plt.hist(Ierr.flatten(), np.linspace(0, 0.012, 10))
+    plt.xlabel("Difference between ground truth and calculated intensity for each pixel")
+    plt.title("Root mean square error per pixel histogram")
     plt.show()
 
 #This function does the chrome_sphere analysis and returns the light direction matrix
@@ -242,7 +246,6 @@ def pms_analysis(dir_img, L):
         maski = cv.erode(maski,kernel,iterations = 1)
         maski = maski.flatten()
         masks.append(maski)
-
     masks = np.array(masks)
     final_mask = np.uint8(np.reshape(np.sum(masks, axis=0), (dim[1], dim[0])))
     print("final mask shape", final_mask.shape)
@@ -268,7 +271,6 @@ def pms_analysis(dir_img, L):
     surface_normals = cv.merge((b, g, r))
     
     compare_harvard_sn(surface_normals, final_mask)
-    
     return surface_normals
 
 def main():
@@ -279,7 +281,7 @@ def main():
                         help="Toggle this option if you are operating on the harvard dataset")
     args = parser.parse_args(sys.argv[1:])
     if args.toggle:
-        dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/LightProbe-1"
+        dir_chrome = getcwd() + "/test_data/cat/LightProbe-1"
         dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     else:
         dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome1"
