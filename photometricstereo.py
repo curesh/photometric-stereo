@@ -4,10 +4,10 @@ from os import getcwd
 import sys
 import cv2 as cv
 import numpy as np
-from skimage import measure
 import argparse
 import math
 import matplotlib.pyplot as plt
+from skimage import measure
 
 # This function finds the chrome sphere location in a chrome sphere img
 def get_circle(chrome_img, dp):
@@ -282,7 +282,7 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     if args.toggle:
         dir_chrome = getcwd() + "/test_data/cat/LightProbe-1"
-        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
+        dir_img = getcwd() + "/test_data/cat/Objects"
     else:
         dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome1"
         dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj1"
