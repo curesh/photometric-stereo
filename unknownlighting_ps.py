@@ -11,10 +11,13 @@ from PIL import Image
 def change_of_basis(S, z_coord, dim):
     z_norm = S[z_coord[0]*dim[1]+z_coord[1]]
     y_norm = S[53*dim[1]+102]
-    cb_matrix = [[1, 0, z_norm[0]],
-                 [0, 1, z_norm[1]],
-                 [0, 0, z_norm[2]]]
-    cb_matrix_inv = np.linalg.inv(np.array(cb_matrix))
+    x_norm = S[79*dim[1]+151]
+    cb_matrix = [[x_norm[0], y_norm[0], z_norm[0]],
+                 [x_norm[1], y_norm[1], z_norm[1]],
+                 [x_norm[2], y_norm[2], z_norm[2]]]
+    cb_matrix = np.array(cb_matrix)
+    print("cb_matrix: ", cb_matrix)
+    cb_matrix_inv = np.linalg.inv(cb_matrix)
     S = np.array([cb_matrix_inv.dot(vect) for vect in S])
     return S
 
