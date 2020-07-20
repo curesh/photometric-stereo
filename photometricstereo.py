@@ -4,10 +4,10 @@ from os import getcwd
 import sys
 import cv2 as cv
 import numpy as np
+from skimage import measure
 import argparse
 import math
 import matplotlib.pyplot as plt
-from skimage import measure
 
 # This function finds the chrome sphere location in a chrome sphere img
 def get_circle(chrome_img, dp):
@@ -122,7 +122,7 @@ def compare_harvard_sn(surface_normals, final_mask):
     cv.imshow("orig with change", my_sn)
     cv.imshow("harvard", harvard_sn)
     cv.imshow("error matrix", error_matrix)
-    cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :-1]))
+    cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :]))
     cv.waitKey(0)
     avg_mae /= np.count_nonzero(final_mask)
     avg_mae *= 360/(2*math.pi)
@@ -150,7 +150,7 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
         reconstructed = reconstructed.flatten()
         
         
-        Ierri = np.array(np.double(I[:,i]) - reconstructed)/256
+        Ierri = np.array(np.double(I[:,i]) - reconstructed)/255
 
         for iterate, element in enumerate(Ierri):
             if not masks[i,iterate]:
@@ -212,9 +212,9 @@ def chrome_sphere_analysis(dir_chrome, args):
         # chrome_img = draw_gridlines(chrome_img)
 
         # Main display for chrome sphere
-        # cv.imshow('chrome sphere post analysis', chrome_img)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
+        cv.imshow('chrome sphere post analysis', chrome_img)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
         
         N = find_sphere_normal(max_loc, circle)
         L_vector = [(2*np.dot(N,R)*N[i])-R[i] for i in range(3)]
@@ -250,6 +250,7 @@ def pms_analysis(dir_img, L):
     final_mask = np.uint8(np.reshape(np.sum(masks, axis=0), (dim[1], dim[0])))
     print("final mask shape", final_mask.shape)
     final_mask = cv.threshold(final_mask, 1, 255, cv.THRESH_BINARY)[1]
+    np.savetxt("final_mask.txt", final_mask, delimiter=',')
     I = np.array(I)
     G = get_surface_normals(L, I).T
     print("G shape: ", G.shape)
@@ -264,13 +265,12 @@ def pms_analysis(dir_img, L):
         surface_normals.append(arr)
     surface_normals = np.array(surface_normals)
     print("Final surface normals shape: ", surface_normals.shape)
-    row = []
     r = np.array(surface_normals[0])
     g = np.array(-1 *surface_normals[1])
     b = np.array(surface_normals[2])
     surface_normals = cv.merge((b, g, r))
     
-    compare_harvard_sn(surface_normals, final_mask)
+    #compare_harvard_sn(surface_normals, final_mask)
     return surface_normals
 
 def main():
@@ -282,7 +282,7 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     if args.toggle:
         dir_chrome = getcwd() + "/test_data/cat/LightProbe-1"
-        dir_img = getcwd() + "/test_data/cat/Objects"
+        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     else:
         dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome1"
         dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj1"

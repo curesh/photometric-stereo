@@ -6,7 +6,48 @@ from os import listdir
 from os.path import isfile, join
 import scipy
 import os
-from PIL import Image
+import math
+
+def compare_harvard_sn(final_mask):
+    harvard_sn_dir = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/original_sn.png"
+    orig_my_img_dir = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/my_img_ul.png"
+    my_sn = cv.imread(orig_my_img_dir, 1)
+    harvard_sn = cv.imread(harvard_sn_dir, 1)
+    print("harvard shape: ", harvard_sn.shape)
+    print("my_sn: ", my_sn.shape)
+    avg_mae = 0
+    scale = harvard_sn.shape[0]/500
+    width = int(harvard_sn.shape[1] / scale)
+    height = int(harvard_sn.shape[0] / scale)
+    dim = (width, height)
+    harvard_sn = cv.resize(harvard_sn, dim, interpolation=cv.INTER_AREA)
+    error_matrix = np.zeros(harvard_sn.shape)
+    for i in range(harvard_sn.shape[0]):
+        for j in range(harvard_sn.shape[1]):
+            if final_mask[i][j]:
+                mags = round(np.linalg.norm(my_sn[i][j])*np.linalg.norm(harvard_sn[i][j]))
+                norm = np.dot(np.double(my_sn[i][j]), np.double(harvard_sn[i][j]))
+                if norm == 0 and mags == 0:
+                    norm = 0
+                else:
+                    norm = norm/mags
+                avg_mae += abs(math.acos(norm))
+                error_matrix[i][j] = abs(math.acos(norm))
+            else:
+                my_sn[i][j] = [255,255,255]
+    error_matrix = np.uint8(error_matrix*256)
+    # my_sn = cv.normalize(my_sn, None, alpha = 0, beta = 255, norm_type = cv.NORM_MINMAX, dtype = cv.CV_32F)
+    # my_sn = np.uint8(my_sn) 
+    cv.imshow("orig with change", my_sn)
+    cv.imshow("harvard", harvard_sn)
+    cv.imshow("error matrix", error_matrix)
+    cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :]))
+    cv.waitKey(0)
+    avg_mae /= np.count_nonzero(final_mask)
+    avg_mae *= 360/(2*math.pi)
+    print("Average mean angle error: ", avg_mae)
+    print("median of mine", np.median(my_sn))
+    print("median of harvard", np.median(harvard_sn))
 
 def change_of_basis(S, z_coord, dim):
     z_norm = S[z_coord[0]*dim[1]+z_coord[1]]
@@ -24,7 +65,7 @@ def change_of_basis(S, z_coord, dim):
 def main():
     # PARAMS
     height_scale = 0.5 #scale relative to 500
-    
+
     parser = argparse.ArgumentParser(description="Perform unknown lighting photometric stereo on a dataset")
     parser.add_argument('-z', '--zloc', required=True,
                          help="Pixel coordinates in the image for the location where the surface normal is (0,0,1)")
@@ -116,7 +157,26 @@ def main():
     print("This vector is the transformed z vector check. It should be 0,0,1: ", surface_normals[0][0])
     print("71")
 
-    np.savetxt('output.txt', S, delimiter=',')
-    cv.imwrite("output.jpg", surface_normals)
+    # np.savetxt('output.txt', S, delimiter=',')
+    # cv.imwrite("output.jpg", surface_normals)
+    # S = np.loadtxt("output.txt", delimiter=",")
+    final_mask = np.loadtxt("final_mask.txt", delimiter=",")
+    S = np.array(S).T
+    #swap red and blue
+    temp = S[0].copy()
+    S[0] = S[2]
+    S[2] = temp
+    S = S.T
+    S[:,1] = S[:,1].copy() * -1
+    #swap red and green but negate green
+    # temp = S[1].copy()
+    # S[1] = S[2]
+    # S[2] = temp
+    S = np.reshape(S, (250, 195, 3))
+    compare_harvard_sn(final_mask)
+    cv.imshow("Output", S)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+    
 if __name__ == "__main__":
     main()
