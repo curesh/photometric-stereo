@@ -62,6 +62,26 @@ def change_of_basis(S, z_coord, dim):
     S = np.array([cb_matrix_inv.dot(vect) for vect in S])
     return S
 
+def show_txt():
+    S = np.loadtxt("output.txt", delimiter=",")
+    final_mask = np.loadtxt("final_mask.txt", delimiter=",")
+    S = np.array(S).T
+    #swap red and blue
+    temp = S[0].copy()
+    S[0] = S[2]
+    S[2] = temp
+    S = S.T
+    S[:,1] = S[:,1].copy() * -1
+    #swap red and green but negate green
+    # temp = S[1].copy()
+    # S[1] = S[2]
+    # S[2] = temp
+    S = np.reshape(S, (250, 195, 3))
+    compare_harvard_sn(final_mask)
+    cv.imshow("Output", S)
+    cv.waitKey(0)
+    cv.destroyAllWindows()    
+
 def main():
     # PARAMS
     height_scale = 0.5 #scale relative to 500
@@ -69,8 +89,12 @@ def main():
     parser = argparse.ArgumentParser(description="Perform unknown lighting photometric stereo on a dataset")
     parser.add_argument('-z', '--zloc', required=True,
                          help="Pixel coordinates in the image for the location where the surface normal is (0,0,1)")
+    parser.add_argument('-s', '--savetxt', action='store_true', help="toggle this option if you want to store image into text file instead of displaying it.")
     args = parser.parse_args(sys.argv[1:])
     print("start")
+    if not args.savetxt:
+        show_txt()
+        sys.exit(0)
     dir_images = os.getcwd() + "/test_data/cat/Objects"
     img_files = sorted([join(dir_images, f) for f in listdir(dir_images) if isfile(join(dir_images, f))])
     I = []
@@ -156,27 +180,10 @@ def main():
     print("This vector is the transformed z vector check. It should be 0,0,1: ", surface_normals[z_coord[0]][z_coord[1]])
     print("This vector is the transformed z vector check. It should be 0,0,1: ", surface_normals[0][0])
     print("71")
-
-    # np.savetxt('output.txt', S, delimiter=',')
+    
+    np.savetxt('output.txt', S, delimiter=',')
     # cv.imwrite("output.jpg", surface_normals)
-    # S = np.loadtxt("output.txt", delimiter=",")
-    final_mask = np.loadtxt("final_mask.txt", delimiter=",")
-    S = np.array(S).T
-    #swap red and blue
-    temp = S[0].copy()
-    S[0] = S[2]
-    S[2] = temp
-    S = S.T
-    S[:,1] = S[:,1].copy() * -1
-    #swap red and green but negate green
-    # temp = S[1].copy()
-    # S[1] = S[2]
-    # S[2] = temp
-    S = np.reshape(S, (250, 195, 3))
-    compare_harvard_sn(final_mask)
-    cv.imshow("Output", S)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
+
     
 if __name__ == "__main__":
     main()
