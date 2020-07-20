@@ -122,7 +122,7 @@ def compare_harvard_sn(surface_normals, final_mask):
     cv.imshow("orig with change", my_sn)
     cv.imshow("harvard", harvard_sn)
     cv.imshow("error matrix", error_matrix)
-    cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :-1]))
+    cv.imshow("diff", np.absolute(harvard_sn-my_sn[:, :]))
     cv.waitKey(0)
     avg_mae /= np.count_nonzero(final_mask)
     avg_mae *= 360/(2*math.pi)
@@ -250,6 +250,7 @@ def pms_analysis(dir_img, L):
     final_mask = np.uint8(np.reshape(np.sum(masks, axis=0), (dim[1], dim[0])))
     print("final mask shape", final_mask.shape)
     final_mask = cv.threshold(final_mask, 1, 255, cv.THRESH_BINARY)[1]
+    np.savetxt("final_mask.txt", final_mask, delimiter=',')
     I = np.array(I)
     G = get_surface_normals(L, I).T
     print("G shape: ", G.shape)
@@ -264,7 +265,6 @@ def pms_analysis(dir_img, L):
         surface_normals.append(arr)
     surface_normals = np.array(surface_normals)
     print("Final surface normals shape: ", surface_normals.shape)
-    row = []
     r = np.array(surface_normals[0])
     g = np.array(-1 *surface_normals[1])
     b = np.array(surface_normals[2])
