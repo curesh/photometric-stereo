@@ -49,10 +49,10 @@ def compare_harvard_sn(final_mask):
     print("median of mine", np.median(my_sn))
     print("median of harvard", np.median(harvard_sn))
 
-def change_of_basis(S, z_coord, dim):
-    z_norm = S[z_coord[0]*dim[1]+z_coord[1]]
-    y_norm = S[53*dim[1]+102]
-    x_norm = S[79*dim[1]+151]
+def change_of_basis(S, z_coord, y_coord, x_coord, dim):
+    z_norm = S[int(z_coord[0]*dim[1]+z_coord[1])]
+    y_norm = S[int(y_coord[0]*dim[1]+y_coord[1])]
+    x_norm = S[int(x_coord[0]*dim[1]+x_coord[1])]
     cb_matrix = [[x_norm[0], y_norm[0], z_norm[0]],
                  [x_norm[1], y_norm[1], z_norm[1]],
                  [x_norm[2], y_norm[2], z_norm[2]]]
@@ -100,6 +100,9 @@ def main():
     I = []
     # You need to find a pixel where the real surface norm is (0,0,1): This is 300, 225 in the harvard dataset: 200, 175 in adjusted
     z_coord = (int(args.zloc.split(",")[0]), int(args.zloc.split(",")[1]))
+    z_coord = [900, 1200]
+    y_coord = [400, 1200]
+    x_coord = [745, 1520]
     print("Z-cord: ", z_coord)
     for iterate in range(0, len(img_files), 3):
         file = img_files[iterate]
@@ -113,7 +116,15 @@ def main():
             img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
             img = img
             dim = img.shape
+            if z_coord[0] > 500*height_scale or z_coord[1] > 500*height_scale:
+                z_coord[0] /= scale
+                z_coord[1] /= scale
+                y_coord[0] /= scale
+                y_coord[1] /= scale
+                x_coord[0] /= scale
+                x_coord[1] /= scale
         I.append(img.flatten())
+    print("Scale factor: ", scale)
     I = np.array(I).T
     dim = (dim[0], dim[1], I.shape[1])
     print("dim shape", dim)
@@ -137,7 +148,7 @@ def main():
     print("s_hat shape ", s_hat.shape)
     print("l_hat shape ", l_hat.shape)
     # 6 points to the right of 180, 90
-    ind_albedo = [int(180*height_scale)*dim[1] + int(elem) for elem in np.linspace(90*height_scale, 280*height_scale, 6)]
+    ind_albedo = [int(460/scale)*dim[1] + int(elem) for elem in np.linspace(int(320/scale), int(1470/scale), 6)]
     print("ind albedo: ", ind_albedo)
     b_matrix_vars = np.zeros((len(ind_albedo), 7))
     ### Find 6 vectors in the rows of s_hat that are on the surface of the object.
@@ -166,7 +177,7 @@ def main():
     print("S shape: ", S.shape)
     print("L shape: ", L.shape)
 
-    S = change_of_basis(S, z_coord, dim)
+    S = change_of_basis(S, z_coord, y_coord, x_coord, dim)
     print("Check S before adjust to int8: ", S[dim[1]*z_coord[0] + z_coord[1]])
     print("Confirmation value after normalization: ", np.uint8( 128* (S[dim[1]*z_coord[0]+z_coord[1]]+1)))
     #    S = S.clip(min=0)

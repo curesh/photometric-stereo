@@ -14,3 +14,4 @@ For vani's data set, the best dp is 1.4 and the best threshold is 240.
 To run with the [harvard dataset](http://vision.seas.harvard.edu/qsfs/Data.html) switch branch from master to dataset.
 
 
+For my data set, ideal dp value is 1.4

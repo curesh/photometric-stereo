@@ -29,7 +29,7 @@ def find_chrome_reflect(chrome_img, circle):
             if dist > rad:
                 blurred[i][j] = 0
     # radius might need to be adjusted
-    thresh = cv.threshold(blurred, 180, 255, cv.THRESH_BINARY)[1]
+    thresh = cv.threshold(blurred, 230, 255, cv.THRESH_BINARY)[1]
     thresh = cv.erode(thresh, None, iterations=2)
     thresh = cv.dilate(thresh, None, iterations=4)
     labels = measure.label(thresh, connectivity=2, background=0)
@@ -135,6 +135,7 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
     Ierr = np.array([])
     # This assumes that each normal vector is a row, and that image matrix is flattened into an array
     b = np.array([vect*albedo[i] for i,vect in enumerate(surface_normals)])
+
     for i in range(I.shape[1]):
         reconstructed = np.reshape(np.array([np.dot(b[j], L[i]) if np.dot(b[j], L[i])>0 else 0 for j in range(b.shape[0])]), (dim[1], dim[0]))
         # THe following code is to look at the reconstructed images
@@ -250,6 +251,9 @@ def pms_analysis(dir_img, L):
     final_mask = np.uint8(np.reshape(np.sum(masks, axis=0), (dim[1], dim[0])))
     print("final mask shape", final_mask.shape)
     final_mask = cv.threshold(final_mask, 1, 255, cv.THRESH_BINARY)[1]
+    cv.imshow("Mask", final_mask)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
     np.savetxt("final_mask.txt", final_mask, delimiter=',')
     I = np.array(I)
     G = get_surface_normals(L, I).T
@@ -266,7 +270,7 @@ def pms_analysis(dir_img, L):
     surface_normals = np.array(surface_normals)
     print("Final surface normals shape: ", surface_normals.shape)
     r = np.array(surface_normals[0])
-    g = np.array(-1 *surface_normals[1])
+    g = np.array(surface_normals[1])
     b = np.array(surface_normals[2])
     surface_normals = cv.merge((b, g, r))
     
@@ -284,8 +288,8 @@ def main():
         dir_chrome = getcwd() + "/test_data/cat/LightProbe-1"
         dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     else:
-        dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/chrome1"
-        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/vani_data/obj1"
+        dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/chrome2"
+        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/obj7"
 
     L = chrome_sphere_analysis(dir_chrome, args)
     surface_normals = pms_analysis(dir_img, L)
