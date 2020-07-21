@@ -29,7 +29,7 @@ def find_chrome_reflect(chrome_img, circle):
             if dist > rad:
                 blurred[i][j] = 0
     # radius might need to be adjusted
-    thresh = cv.threshold(blurred, 240, 255, cv.THRESH_BINARY)[1]
+    thresh = cv.threshold(blurred, 180, 255, cv.THRESH_BINARY)[1]
     thresh = cv.erode(thresh, None, iterations=2)
     thresh = cv.dilate(thresh, None, iterations=4)
     labels = measure.label(thresh, connectivity=2, background=0)
@@ -257,7 +257,7 @@ def pms_analysis(dir_img, L):
     albedo = np.array([np.linalg.norm(vect) for vect in G])
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
     
-    get_errors(albedo, surface_normals_flat.T, I.T, masks, L, dim)
+    #get_errors(albedo, surface_normals_flat.T, I.T, masks, L, dim)
     
     surface_normals = []
     for pixels in surface_normals_flat:
