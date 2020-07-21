@@ -139,16 +139,16 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
     for i in range(I.shape[1]):
         reconstructed = np.reshape(np.array([np.dot(b[j], L[i]) if np.dot(b[j], L[i])>0 else 0 for j in range(b.shape[0])]), (dim[1], dim[0]))
         # THe following code is to look at the reconstructed images
-        # reconstructed = np.uint8(reconstructed)
-        # print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
-        # print("IMportant reconstucted image dtype", reconstructed.dtype)
+        reconstructed = np.uint8(reconstructed)
+        print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
+        print("IMportant reconstucted image dtype", reconstructed.dtype)
 
-        # cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
-        # cv.imshow("reconstructed", reconstructed)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-        # reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
-        reconstructed = reconstructed.flatten()
+        cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
+        cv.imshow("reconstructed", reconstructed)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
+        reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
+        # reconstructed = reconstructed.flatten()
         
         
         Ierri = np.array(np.double(I[:,i]) - reconstructed)/255
@@ -195,15 +195,18 @@ def chrome_sphere_analysis(dir_chrome, args):
             height = int(chrome_img.shape[0] / scale)
             dim = (width, height)
             chrome_img = cv.resize(chrome_img, dim, interpolation=cv.INTER_AREA)
+            # cv.imshow("Original chrome sphere", chrome_img)
         if args.toggle:
             circle = [625, 597, 528]
             circle = [element/scale for element in circle]
         else:
             circle = get_circle(chrome_img, args.dp)
+
         center = [circle[0], circle[1]]
         radius = circle[2]
         cv.circle(chrome_img, (int(center[0]), int(center[1])), int(radius), (255, 0, 0), 2)
         cv.circle(chrome_img, (int(center[0]), int(center[1])), 5, (255, 0, 0), 2)
+        # cv.imshow("Chrome sphere outlined", chrome_img)
         max_loc = find_chrome_reflect(chrome_img, circle)
         if not max_loc:
             continue
@@ -213,9 +216,9 @@ def chrome_sphere_analysis(dir_chrome, args):
         # chrome_img = draw_gridlines(chrome_img)
 
         # Main display for chrome sphere
-        cv.imshow('chrome sphere post analysis', chrome_img)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow('chrome sphere post analysis', chrome_img)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
         
         N = find_sphere_normal(max_loc, circle)
         L_vector = [(2*np.dot(N,R)*N[i])-R[i] for i in range(3)]
@@ -261,7 +264,7 @@ def pms_analysis(dir_img, L):
     albedo = np.array([np.linalg.norm(vect) for vect in G])
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
     
-    #get_errors(albedo, surface_normals_flat.T, I.T, masks, L, dim)
+    get_errors(albedo, surface_normals_flat.T, I.T, masks, L, dim)
     
     surface_normals = []
     for pixels in surface_normals_flat:
@@ -289,7 +292,7 @@ def main():
         dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     else:
         dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/chrome2"
-        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/obj7"
+        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/obj8"
 
     L = chrome_sphere_analysis(dir_chrome, args)
     surface_normals = pms_analysis(dir_img, L)
