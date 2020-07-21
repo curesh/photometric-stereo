@@ -67,17 +67,17 @@ def show_txt():
     final_mask = np.loadtxt("final_mask.txt", delimiter=",")
     S = np.array(S).T
     #swap red and blue
-    temp = S[0].copy()
-    S[0] = S[2]
-    S[2] = temp
+    #    temp = S[0].copy()
+    #S[0] = S[2]
+    #S[2] = temp
     S = S.T
-    S[:,1] = S[:,1].copy() * -1
+    S[:,1] = S[:,1].copy()
     #swap red and green but negate green
-    # temp = S[1].copy()
-    # S[1] = S[2]
-    # S[2] = temp
-    S = np.reshape(S, (250, 195, 3))
-    compare_harvard_sn(final_mask)
+    temp = S[1].copy()
+    S[1] = S[2]
+    S[2] = temp
+    S = np.reshape(S, (200, 209, 3))
+#    compare_harvard_sn(final_mask)
     cv.imshow("Output", S)
     cv.waitKey(0)
     cv.destroyAllWindows()    
