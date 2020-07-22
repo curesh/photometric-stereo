@@ -10,6 +10,20 @@ import math
 import matplotlib.pyplot as plt
 
 # This function finds the chrome sphere location in a chrome sphere img
+def get_mask():
+    dir_clean_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/obj8/IMG_20200721_105758.jpg"
+    good_img = cv.imread(dir_clean_img, 0)
+    # thresh = cv.threshold(good_img, 0, 255, cv.THRESH_OTSU)[1]
+    thresh = cv.threshold(good_img, 105, 255, cv.THRESH_BINARY)[1]
+    thresh = cv.erode(thresh, None, iterations=2)
+    thresh = cv.dilate(thresh, None, iterations=8)
+    
+    kernel = np.ones((171,171),np.uint8)
+    opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+    mask = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernel)
+    mask = cv.bitwise_not(mask)
+    return mask
+
 def get_circle(chrome_img, dp):
     circles = cv.HoughCircles(chrome_img, cv.HOUGH_GRADIENT, dp, 400)
     if circles is None:
@@ -153,9 +167,11 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
         
         Ierri = np.array(np.double(I[:,i]) - reconstructed)/255
 
-        for iterate, element in enumerate(Ierri):
-            if not masks[i,iterate]:
-                Ierri[iterate] = 0
+        #NOTE Uncomment once masks starts working
+        
+        # for iterate, element in enumerate(Ierri):
+        #     if not masks[i,iterate]:
+        #         Ierri[iterate] = 0
         if not Ierr.size:
             Ierr = Ierri**2
         else:
@@ -233,10 +249,12 @@ def pms_analysis(dir_img, L):
     img_files = sorted([join(dir_img, f) for f in listdir(dir_img) if isfile(join(dir_img, f))])
     I = []
     masks = []
+    #mask = get_mask()
     for count, file in enumerate(img_files):
         # if count == 4:
         #     break
         img = cv.imread(file, 0)
+        #img = cv.bitwise_or(img, img, mask=mask)
         if img.shape[0] > 500:
             scale = img.shape[0]/500
             width = int(img.shape[1] / scale)
@@ -292,7 +310,7 @@ def main():
         dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/Objects"
     else:
         dir_chrome = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/chrome2"
-        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/obj8"
+        dir_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/pisa"
 
     L = chrome_sphere_analysis(dir_chrome, args)
     surface_normals = pms_analysis(dir_img, L)

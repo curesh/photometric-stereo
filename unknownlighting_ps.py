@@ -76,7 +76,7 @@ def show_txt():
     temp = S[1].copy()
     S[1] = S[2]
     S[2] = temp
-    S = np.reshape(S, (200, 209, 3))
+    S = np.reshape(S, (200, 211, 3))
 #    compare_harvard_sn(final_mask)
     cv.imshow("Output", S)
     cv.waitKey(0)
