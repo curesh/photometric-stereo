@@ -84,7 +84,7 @@ def show_txt():
 
 def main():
     # PARAMS
-    height_scale = 0.5 #scale relative to 500
+    height_scale = 0.4 #scale relative to 500
 
     parser = argparse.ArgumentParser(description="Perform unknown lighting photometric stereo on a dataset")
     parser.add_argument('-z', '--zloc', required=True,
@@ -95,16 +95,16 @@ def main():
     if not args.savetxt:
         show_txt()
         sys.exit(0)
-    dir_images = os.getcwd() + "/test_data/cat/Objects"
+    dir_images = os.getcwd() + "/test_data/my_data/obj7"
     img_files = sorted([join(dir_images, f) for f in listdir(dir_images) if isfile(join(dir_images, f))])
     I = []
     # You need to find a pixel where the real surface norm is (0,0,1): This is 300, 225 in the harvard dataset: 200, 175 in adjusted
     z_coord = (int(args.zloc.split(",")[0]), int(args.zloc.split(",")[1]))
-    z_coord = [900, 1200]
+    z_coord = [900, 900]
     y_coord = [400, 1200]
-    x_coord = [745, 1520]
+    x_coord = [780, 1420]
     print("Z-cord: ", z_coord)
-    for iterate in range(0, len(img_files), 3):
+    for iterate in range(0, len(img_files)):
         file = img_files[iterate]
         print(file)
         img = cv.imread(file, 0)
@@ -117,8 +117,8 @@ def main():
             img = img
             dim = img.shape
             if z_coord[0] > 500*height_scale or z_coord[1] > 500*height_scale:
-                z_coord[0] /= scale
-                z_coord[1] /= scale
+                z_coord[0] = int(z_coord[0]/scale)
+                z_coord[1] = int(z_coord[1]/ scale)
                 y_coord[0] /= scale
                 y_coord[1] /= scale
                 x_coord[0] /= scale
@@ -148,7 +148,7 @@ def main():
     print("s_hat shape ", s_hat.shape)
     print("l_hat shape ", l_hat.shape)
     # 6 points to the right of 180, 90
-    ind_albedo = [int(460/scale)*dim[1] + int(elem) for elem in np.linspace(int(320/scale), int(1470/scale), 6)]
+    ind_albedo = [int(475/scale)*dim[1] + int(elem) for elem in np.linspace(int(330/scale), int(1370/scale), 6)]
     print("ind albedo: ", ind_albedo)
     b_matrix_vars = np.zeros((len(ind_albedo), 7))
     ### Find 6 vectors in the rows of s_hat that are on the surface of the object.
