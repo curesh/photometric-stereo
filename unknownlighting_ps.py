@@ -62,6 +62,28 @@ def change_of_basis(S, z_coord, y_coord, x_coord, dim):
     S = np.array([cb_matrix_inv.dot(vect) for vect in S])
     return S
 
+def get_error(I, I_new, dim):
+    I = np.reshape(I, (dim[0]*dim[1], dim[2]))
+    I_new = np.reshape(I_new, (dim[0]*dim[1], dim[2]))
+    
+    Ierr = np.array([])
+    for i in range(I.shape[1]):
+        reconstructed = np.uint8(I_new[:,i])
+        Ierri = np.array(np.double(I[:,i]) - reconstructed)/255
+        if not Ierr.size:
+            Ierr = Ierri**2
+        else:
+            Ierr += Ierri**2
+    isfin = np.isfinite(np.sqrt(Ierr/ I.shape[1]) )
+    Ierr = [element for i, element in enumerate(Ierr) if isfin[i]]
+    Ierr = np.array(Ierr)
+    print("Evaluate scaled normal estimation by intensity error:")
+    print("RMS: ", np.sqrt(np.mean(Ierr**2)))
+    print("Mean: ", np.mean(Ierr))
+    print("Median: ", np.median(Ierr))
+    print("90 percentile: ", np.percentile(Ierr, 90))
+    print("Max: ", np.max(Ierr))
+        
 def show_txt():
     S = np.loadtxt("output.txt", delimiter=",")
     final_mask = np.loadtxt("final_mask.txt", delimiter=",")
@@ -95,14 +117,14 @@ def main():
     if not args.savetxt:
         show_txt()
         sys.exit(0)
-    dir_images = os.getcwd() + "/test_data/my_data/obj7"
+    dir_images = os.getcwd() + "/test_data/my_data/pisa"
     img_files = sorted([join(dir_images, f) for f in listdir(dir_images) if isfile(join(dir_images, f))])
     I = []
     # You need to find a pixel where the real surface norm is (0,0,1): This is 300, 225 in the harvard dataset: 200, 175 in adjusted
     z_coord = (int(args.zloc.split(",")[0]), int(args.zloc.split(",")[1]))
-    z_coord = [900, 900]
-    y_coord = [400, 1200]
-    x_coord = [780, 1420]
+    z_coord = [1890, 752]
+    y_coord = [1806, 752]
+    x_coord = [1779, 1138]
     print("Z-cord: ", z_coord)
     for iterate in range(0, len(img_files)):
         file = img_files[iterate]
@@ -148,7 +170,7 @@ def main():
     print("s_hat shape ", s_hat.shape)
     print("l_hat shape ", l_hat.shape)
     # 6 points to the right of 180, 90
-    ind_albedo = [int(475/scale)*dim[1] + int(elem) for elem in np.linspace(int(330/scale), int(1370/scale), 6)]
+    ind_albedo = [int(1813/scale)*dim[1] + int(elem) for elem in np.linspace(int(357/scale), int(1137/scale), 6)]
     print("ind albedo: ", ind_albedo)
     b_matrix_vars = np.zeros((len(ind_albedo), 7))
     ### Find 6 vectors in the rows of s_hat that are on the surface of the object.
@@ -176,8 +198,13 @@ def main():
     L = np.matmul(np.linalg.inv(A), l_hat)
     print("S shape: ", S.shape)
     print("L shape: ", L.shape)
-
+    
     S = change_of_basis(S, z_coord, y_coord, x_coord, dim)
+    I_new = np.matmul(S, L)
+    np.savetxt('reconstructed.txt', np.reshape(I_new, (dim[0]*dim[1], dim[2]))[0], delimiter=',')
+    print("I_new shape", I_new.shape)
+    get_error(I, I_new, dim)
+
     print("Check S before adjust to int8: ", S[dim[1]*z_coord[0] + z_coord[1]])
     print("Confirmation value after normalization: ", np.uint8( 128* (S[dim[1]*z_coord[0]+z_coord[1]]+1)))
     #    S = S.clip(min=0)
