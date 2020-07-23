@@ -153,16 +153,16 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
     for i in range(I.shape[1]):
         reconstructed = np.reshape(np.array([np.dot(b[j], L[i]) if np.dot(b[j], L[i])>0 else 0 for j in range(b.shape[0])]), (dim[1], dim[0]))
         # THe following code is to look at the reconstructed images
-        reconstructed = np.uint8(reconstructed)
-        print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
-        print("IMportant reconstucted image dtype", reconstructed.dtype)
+        # reconstructed = np.uint8(reconstructed)
+        # print("IMportant orig image dtype", np.reshape(I[:, i], (dim[1], dim[0])).dtype)
+        # print("IMportant reconstucted image dtype", reconstructed.dtype)
 
-        cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
-        cv.imshow("reconstructed", reconstructed)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
-        reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
-        # reconstructed = reconstructed.flatten()
+        # cv.imshow("orig", np.reshape(I[:,i], (dim[1], dim[0])))
+        # cv.imshow("reconstructed", reconstructed)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+        # reconstructed = [np.single(elem) for elem in reconstructed.flatten()]
+        reconstructed = reconstructed.flatten()
         
         
         Ierri = np.array(np.double(I[:,i]) - reconstructed)/255
@@ -176,9 +176,9 @@ def get_errors(albedo, surface_normals, I, masks, L, dim):
             Ierr = Ierri**2
         else:
             Ierr += Ierri**2
-    with np.errstate(divide='ignore',invalid='ignore'):
-        isfin = np.isfinite(np.sqrt(Ierr/ np.sum(masks, 0)))
-
+    # with np.errstate(divide='ignore',invalid='ignore'):
+    #     isfin = np.isfinite(np.sqrt(Ierr/ np.sum(masks, 0)))
+    isfin = np.isfinite(np.sqrt(Ierr/ I.shape[1]) )
     Ierr = [element for i, element in enumerate(Ierr) if isfin[i]]
     Ierr = np.array(Ierr)
     print("Evaluate scaled normal estimation by intensity error:")
@@ -272,16 +272,16 @@ def pms_analysis(dir_img, L):
     final_mask = np.uint8(np.reshape(np.sum(masks, axis=0), (dim[1], dim[0])))
     print("final mask shape", final_mask.shape)
     final_mask = cv.threshold(final_mask, 1, 255, cv.THRESH_BINARY)[1]
-    cv.imshow("Mask", final_mask)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
+    # cv.imshow("Mask", final_mask)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
     np.savetxt("final_mask.txt", final_mask, delimiter=',')
     I = np.array(I)
     G = get_surface_normals(L, I).T
     print("G shape: ", G.shape)
     albedo = np.array([np.linalg.norm(vect) for vect in G])
     surface_normals_flat = np.array([vect/np.linalg.norm(vect) for vect in G]).T
-    
+    print("I.T shape", I.T.shape)
     get_errors(albedo, surface_normals_flat.T, I.T, masks, L, dim)
     
     surface_normals = []
