@@ -83,22 +83,29 @@ def get_error(I, I_new, dim):
     print("Median: ", np.median(Ierr))
     print("90 percentile: ", np.percentile(Ierr, 90))
     print("Max: ", np.max(Ierr))
+
+def show_reconstructed():
+    reconstructed = np.loadtxt("reconstructed.txt", delimiter=',')
+    reconstructed = np.reshape(reconstructed, (200, 150))
+    cv.imshow("reconstructed", reconstructed)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
         
 def show_txt():
     S = np.loadtxt("output.txt", delimiter=",")
     final_mask = np.loadtxt("final_mask.txt", delimiter=",")
     S = np.array(S).T
     #swap red and blue
-    #    temp = S[0].copy()
-    #S[0] = S[2]
-    #S[2] = temp
+    temp = S[0].copy()
+    S[0] = S[2]
+    S[2] = temp
     S = S.T
     S[:,1] = S[:,1].copy()
     #swap red and green but negate green
     temp = S[1].copy()
     S[1] = S[2]
     S[2] = temp
-    S = np.reshape(S, (200, 211, 3))
+    S = np.reshape(S, (250, 188, 3))
 #    compare_harvard_sn(final_mask)
     cv.imshow("Output", S)
     cv.waitKey(0)
@@ -112,8 +119,13 @@ def main():
     parser.add_argument('-z', '--zloc', required=True,
                          help="Pixel coordinates in the image for the location where the surface normal is (0,0,1)")
     parser.add_argument('-s', '--savetxt', action='store_true', help="toggle this option if you want to store image into text file instead of displaying it.")
+    parser.add_argument('-r', '--reconstruct', action='store_true', help="toggle this option if you want to reconstruct image into text file instead of displaying it.")
+
     args = parser.parse_args(sys.argv[1:])
     print("start")
+    if args.reconstruct:
+        show_reconstructed()
+        sys.exit(0)
     if not args.savetxt:
         show_txt()
         sys.exit(0)
