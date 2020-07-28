@@ -8,6 +8,27 @@ import scipy
 import os
 import math
 
+def get_mask():
+    dir_clean_img = "./test_data/my_data/pisa/IMG_20200721_232857.jpg"
+    good_img = cv.imread(dir_clean_img, 0)
+
+    thresh = cv.threshold(good_img, 0, 255, cv.THRESH_OTSU)[1]
+    # thresh = cv.threshold(good_img, 90, 255, cv.THRESH_BINARY)[1]
+    thresh = cv.erode(thresh, None, iterations=2)
+    thresh = cv.dilate(thresh, None, iterations=2)
+    thresh = cv.bitwise_not(thresh)
+    contour,hier = cv.findContours(thresh,cv.RETR_CCOMP,cv.CHAIN_APPROX_SIMPLE)
+    areas = [cv.contourArea(c) for c in contour]
+    max_index = np.argmax(areas)
+    cnt=contour[max_index]
+    cv.drawContours(thresh,[cnt],0,255,-1)
+    gray = cv.bitwise_not(thresh)
+    kernel = np.ones((9,9),np.uint8)
+    opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+    mask = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernel)
+
+    return mask
+
 def compare_harvard_sn(final_mask):
     harvard_sn_dir = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/cat/original_sn.png"
     orig_my_img_dir = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/my_img_ul.png"
@@ -50,9 +71,13 @@ def compare_harvard_sn(final_mask):
     print("median of harvard", np.median(harvard_sn))
 
 def change_of_basis(S, z_coord, y_coord, x_coord, dim):
+    print("Y_coord in change of basis: ", y_coord)
+    print("Dim in change of bas: ", dim)
+    print("Calculation: ", int(y_coord[0]*dim[1]+y_coord[1]))
     z_norm = S[int(z_coord[0]*dim[1]+z_coord[1])]
     y_norm = S[int(y_coord[0]*dim[1]+y_coord[1])]
     x_norm = S[int(x_coord[0]*dim[1]+x_coord[1])]
+    print("Y-norm!!, ", y_norm)
     cb_matrix = [[x_norm[0], y_norm[0], z_norm[0]],
                  [x_norm[1], y_norm[1], z_norm[1]],
                  [x_norm[2], y_norm[2], z_norm[2]]]
@@ -62,10 +87,9 @@ def change_of_basis(S, z_coord, y_coord, x_coord, dim):
     S = np.array([cb_matrix_inv.dot(vect) for vect in S])
     return S
 
-def get_error(I, I_new, dim):
+def get_error(I, I_new, dim, mask):
     I = np.reshape(I, (dim[0]*dim[1], dim[2]))
     I_new = np.reshape(I_new, (dim[0]*dim[1], dim[2]))
-    
     Ierr = np.array([])
     for i in range(I.shape[1]):
         reconstructed = np.uint8(I_new[:,i])
@@ -74,8 +98,8 @@ def get_error(I, I_new, dim):
             Ierr = Ierri**2
         else:
             Ierr += Ierri**2
-    isfin = np.isfinite(np.sqrt(Ierr/ I.shape[1]) )
-    Ierr = [element for i, element in enumerate(Ierr) if isfin[i]]
+    Ierr = np.sqrt(Ierr/ I.shape[1])
+    Ierr = [element for i, element in enumerate(Ierr) if mask[i]]
     Ierr = np.array(Ierr)
     print("Evaluate scaled normal estimation by intensity error:")
     print("RMS: ", np.sqrt(np.mean(Ierr**2)))
@@ -114,7 +138,7 @@ def show_txt():
 def main():
     # PARAMS
     height_scale = 0.4 #scale relative to 500
-
+    mask = get_mask()
     parser = argparse.ArgumentParser(description="Perform unknown lighting photometric stereo on a dataset")
     parser.add_argument('-z', '--zloc', required=True,
                          help="Pixel coordinates in the image for the location where the surface normal is (0,0,1)")
@@ -142,13 +166,14 @@ def main():
         file = img_files[iterate]
         print(file)
         img = cv.imread(file, 0)
+        #img = cv.bitwise_or(img, img, mask=mask)
         if img.shape[0] > 500*height_scale:
             scale = img.shape[0]/(500*height_scale)
             width = int(img.shape[1] / scale)
             height = int(img.shape[0] / scale)
             dim = (width, height)
             img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
-            img = img
+            mask = cv.resize(mask, dim, interpolation=cv.INTER_AREA)
             dim = img.shape
             if z_coord[0] > 500*height_scale or z_coord[1] > 500*height_scale:
                 z_coord[0] = int(z_coord[0]/scale)
@@ -158,6 +183,7 @@ def main():
                 x_coord[0] /= scale
                 x_coord[1] /= scale
         I.append(img.flatten())
+    print("y_coord in main,", y_coord)
     print("Scale factor: ", scale)
     I = np.array(I).T
     dim = (dim[0], dim[1], I.shape[1])
@@ -178,7 +204,6 @@ def main():
     # NOTE that you also want to check the output if you negate all the sigma matrices to see if your righthandedness is correct
     s_hat = np.matmul(u_clean, np.sqrt(sigma_clean))
     l_hat = np.matmul(np.sqrt(sigma_clean), vh_clean)
-    print("48")
     print("s_hat shape ", s_hat.shape)
     print("l_hat shape ", l_hat.shape)
     # 6 points to the right of 180, 90
@@ -204,18 +229,22 @@ def main():
     b_sigma = np.diag(b_sigma)
     print(b_sigma)
     A = np.matmul(b_u, np.sqrt(b_sigma))
-    print("63")
     print("A shape: ", A.shape)
     S = np.matmul(s_hat, A)
     L = np.matmul(np.linalg.inv(A), l_hat)
+    L = np.array([v/np.linalg.norm(v)*0.8 for v in L.T]).T
+
     print("S shape: ", S.shape)
     print("L shape: ", L.shape)
     
     S = change_of_basis(S, z_coord, y_coord, x_coord, dim)
     I_new = np.matmul(S, L)
-    np.savetxt('reconstructed.txt', np.reshape(I_new, (dim[0]*dim[1], dim[2]))[0], delimiter=',')
+    sample_reconstructed = np.reshape(I_new, (dim[0]*dim[1], dim[2])).T[0]
+    mask = np.reshape(mask, (dim[0]*dim[1]))
+    sample_reconstructed = np.array([element if mask[i] else 0 for i, element in enumerate(sample_reconstructed)])
+    np.savetxt('reconstructed.txt', sample_reconstructed, delimiter=',')
     print("I_new shape", I_new.shape)
-    get_error(I, I_new, dim)
+    get_error(I, I_new, dim, mask)
 
     print("Check S before adjust to int8: ", S[dim[1]*z_coord[0] + z_coord[1]])
     print("Confirmation value after normalization: ", np.uint8( 128* (S[dim[1]*z_coord[0]+z_coord[1]]+1)))

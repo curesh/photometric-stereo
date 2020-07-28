@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 # This function finds the chrome sphere location in a chrome sphere img
 def get_mask():
-    dir_clean_img = "/Users/bigboi01/Documents/CSProjects/KadambiLab/photometricStereo/test_data/my_data/obj8/IMG_20200721_105758.jpg"
+    dir_clean_img = "./test_data/my_data/obj8/IMG_20200721_105758.jpg"
     good_img = cv.imread(dir_clean_img, 0)
     # thresh = cv.threshold(good_img, 0, 255, cv.THRESH_OTSU)[1]
     thresh = cv.threshold(good_img, 105, 255, cv.THRESH_BINARY)[1]
